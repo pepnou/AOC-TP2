@@ -10,6 +10,8 @@
 
 */
 
+#define _POSIX_C_SOURCE 200809L
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,33 +27,63 @@
 
 //
 #define max(a, b) ((a) > (b)) ? (a) : (b)
+#define min(a, b) ((a) < (b)) ? (a) : (b)
 
 //
 #define GRID_H 201   //Y axis
 #define GRID_W 201   //X axis
 #define GRID_C 2     //Chemicals: A & B
 
+#define index(A,i,j,c) A[(c)*GRID_H*GRID_W + (i)*GRID_W + (j)]
+
 //For pixel RGB channels
 typedef unsigned char byte;
 
-//Laplacian - Stencil
+/*//Laplacian - Stencil
 float laplacian(float g[GRID_H][GRID_W][GRID_C], int i, int j, int c)
 {
-   float sum = -g[i][j][c];
+  float sum = 0.0;
 
-   sum += (g[i - 1][j][c]     *   0.2);
-   sum += (g[i + 1][j][c]     *   0.2);
-   sum += (g[i][j - 1][c]     *   0.2);
-   sum += (g[i][j + 1][c]     *   0.2);
-   sum += (g[i - 1][j - 1][c] *   0.05);
-   sum += (g[i - 1][j + 1][c] *   0.05);
-   sum += (g[i + 1][j - 1][c] *   0.05);
-   sum += (g[i + 1][j + 1][c] *   0.05);
+  sum += (g[i - 1][j - 1][c] *   0.05);
+  sum += (g[i - 1][j][c]     *   0.2);
+  sum += (g[i - 1][j + 1][c] *   0.05);
 
-   return sum;
+  sum += (g[i][j - 1][c]     *   0.2);
+  sum -= (g[i][j][c]);
+  sum += (g[i][j + 1][c]     *   0.2);
+
+  sum += (g[i + 1][j - 1][c] *   0.05);
+  sum += (g[i + 1][j][c]     *   0.2);
+  sum += (g[i + 1][j + 1][c] *   0.05);
+
+  return sum;
+}*/
+
+//Laplacian - Stencil
+float laplacian(float * restrict g, int i, int j, int c)
+{
+  float sum = 0.0;
+
+  /*sum += (index(g,i - 1,j - 1,c) *   0.05);
+  sum += (index(g,i - 1,j,c)     *   0.2);
+  sum += (index(g,i - 1,j + 1,c) *   0.05);
+
+  sum += (index(g,i,j - 1,c)     *   0.2);
+  sum -= (index(g,i,j,c));
+  sum += (index(g,i,j + 1,c)     *   0.2);
+
+  sum += (index(g,i + 1,j - 1,c) *   0.05);
+  sum += (index(g,i + 1,j,c)     *   0.2);
+  sum += (index(g,i + 1,j + 1,c) *   0.05);*/
+
+  sum += (index(g,i - 1,j - 1,c) + index(g,i - 1,j + 1,c) + index(g,i + 1,j - 1,c) + index(g,i + 1,j + 1,c)) * 0.05;
+  sum += (index(g,i - 1,j,c) + index(g,i,j-1,c) + index(g,i,j + 1,c) + index(g,i+1,j,c)) * 0.2;
+  sum -= (index(g,i,j,c));
+
+  return sum;
 }
 
-//
+/*//
 void init(float G1[GRID_H][GRID_W][GRID_C])
 {
    //Initialize grid with chemical A only
@@ -68,6 +100,24 @@ void init(float G1[GRID_H][GRID_W][GRID_C])
    for (int i = n - 5; i < n + 5; i++)
       for (int j = n - 5; j < n + 5; j++)
          G1[i][j][1] = 1.0; //Chemical B
+}*/
+
+void init(float* restrict G1)
+{
+   //Initialize grid with chemical A only
+   for (int i = 1; i < GRID_H - 1; i++)
+      for (int j = 1; j < GRID_W - 1; j++)
+         {
+            index(G1,i,j,0) = 1.0; //Chemical A
+            index(G1,i,j,1) = 0.0;
+         }
+
+   unsigned long long n = (GRID_H >> 1);
+
+   //Add some of chemical B
+   for (int i = n - 5; i < n + 5; i++)
+      for (int j = n - 5; j < n + 5; j++)
+         index(G1,i,j,1) = 1.0; //Chemical B
 }
 
 //
@@ -76,8 +126,10 @@ void diffuse(
              flame_obj_t *fo,
 #endif
              int bx, int by,
-             float G[GRID_H][GRID_W][GRID_C],
-             float G1[GRID_H][GRID_W][GRID_C],
+             //float G[GRID_H][GRID_W][GRID_C],
+             float * restrict G,
+             //float G1[GRID_H][GRID_W][GRID_C],
+             float * restrict G1,
 #ifdef WITH_X11
              unsigned frame[GRID_H][GRID_W],
 #endif
@@ -96,13 +148,15 @@ void diffuse(
       {
          for (int j = 1; j < GRID_W - 1; j++)
             {
-               G[i][j][0] = G1[i][j][0];
-               G[i][j][1] = G1[i][j][1];
-
+               //G[i][j][0] = G1[i][j][0];
+               //G[i][j][1] = G1[i][j][1];
+               index(G,i,j,0) = index(G1,i,j,0);
+               index(G,i,j,1) = index(G1,i,j,1);
 #ifdef WITH_X11
                if ((iter % 50) == 0)
                   {
-                     ta = G[i][j][0] - G1[i][j][1];
+                     //ta = G[i][j][0] - G1[i][j][1];
+                     ta = index(G,i,j,0) - index(G1,i,j,1);
 
                      //Set r, g, b according to temp
                      if (ta > 0.8)
@@ -122,20 +176,50 @@ void diffuse(
             }
       }
 
+   int min_i = (GRID_H >> 1) - 10 - iter, max_i = min(GRID_H - 1, (GRID_H >> 1) + 10 + iter);
+   if(min_i < 1)
+    min_i = 1;
+
+   int min_j = (GRID_W >> 1) - 10 - iter, max_j = min(GRID_W - 1, (GRID_W >> 1) + 10 + iter);
+   if(min_j < 1)
+     min_j = 1;
+
+   float* G_align = __builtin_assume_aligned (G, 32);
+
    //
-   for (int i = 1; i < GRID_H - 1; i++) {
-     for (int j = 1; j < GRID_W - 1; j++)
-     {
-       ta = G[i][j][0];
-       tb = G[i][j][1];
+   for (int j = min_j; j < max_j; j += 16) {
+     for (int i = min_i; i < max_i; i++) {
+       for (int l = 0; l+j  < max_j && l < 16; l++) {
+         //ta = G[i][j+l][0];
+         //tb = G[i][j+l][1];
 
-       //Chemical A
-       G1[i][j][0] = ta + (diff_rate_A * laplacian(G, i, j, 0) - (ta * tb * tb) + (f * (1 - ta))) * dt;
+         ta = index(G,i,j+l,0);
+         tb = index(G,i,j+l,1);
 
-       //Chemical B
-       G1[i][j][1] = tb + (diff_rate_B * laplacian(G, i, j, 1) + (ta * tb * tb) - ((k + f) * tb)) * dt;
+         //Chemical A
+         index(G1,i,j+l,0) = ta + (diff_rate_A * laplacian(G_align, i, j+l, 0) - (ta * tb * tb) + (f * (1 - ta))) * dt;
+
+         //Chemical B
+         index(G1,i,j+l,1) = tb + (diff_rate_B * laplacian(G_align, i, j+l, 1) + (ta * tb * tb) - ((k + f) * tb)) * dt;
+       }
      }
    }
+
+   /*for (int i = min_i; i < max_i; i++) {
+     for (int j = min_j; j < max_j; j++)
+     {
+         //ta = G[i][j][0];
+         //tb = G[i][j][1];
+
+         ta = index(G,i,j,0);
+         tb = index(G,i,j,1);
+         //Chemical A
+         index(G1,i,j,0) = ta + (diff_rate_A * laplacian(G, i, j, 0) - (ta * tb * tb) + (f * (1 - ta))) * dt;
+
+         //Chemical B
+         index(G1,i,j,1) = tb + (diff_rate_B * laplacian(G, i, j, 1) + (ta * tb * tb) - ((k + f) * tb)) * dt;
+     }
+   }*/
 }
 
 //
@@ -161,10 +245,18 @@ int main(int argc, char **argv)
 #endif
 
    //
-   unsigned frame[GRID_H][GRID_W];
+   unsigned frame[GRID_H][GRID_W]; 
 
    //
-   float G[GRID_H][GRID_W][GRID_C], G1[GRID_H][GRID_W][GRID_C];
+   //float G[GRID_H][GRID_W][GRID_C];
+   //float G1[GRID_H][GRID_W][GRID_C];
+   
+   float *G, *G1;
+   //if(!posix_memalign (&G, 32, GRID_H * GRID_W * GRID_C * sizeof(float))) perror("posix_memalign");
+   //if(!posix_memalign (&G1, 32, GRID_H * GRID_W * GRID_C * sizeof(float))) perror("posix_memalign");
+
+   G = malloc(GRID_H * GRID_W * GRID_C * sizeof(float));
+   G1 = malloc(GRID_H * GRID_W * GRID_C * sizeof(float));
 
    //Memory sizes
    unsigned s      = GRID_H * GRID_W;
