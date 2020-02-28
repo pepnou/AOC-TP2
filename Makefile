@@ -1,8 +1,8 @@
 CC=gcc
 
-CFLAGS=-std=c99 -g3
+CFLAGS=-std=c99 -g3 -g
 
-OFLAGS=-O0
+OFLAGS=-O2 -march=skylake -funroll-loops
 
 LFLAGS=-lm
 

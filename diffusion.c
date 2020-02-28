@@ -37,18 +37,16 @@ typedef unsigned char byte;
 //Laplacian - Stencil
 float laplacian(float g[GRID_H][GRID_W][GRID_C], int i, int j, int c)
 {
-   float sum = 0.0;
+   float sum = -g[i][j][c];
 
-   sum += g[i][j][c]          * (-1.0);
-
-   sum += (g[i - 1][j][c]     *   2.0) / 10.0;;
-   sum += (g[i + 1][j][c]     *   2.0) / 10.0;;
-   sum += (g[i][j - 1][c]     *   2.0) / 10.0;;
-   sum += (g[i][j + 1][c]     *   2.0) / 10.0;;
-   sum += (g[i - 1][j - 1][c] *   5.0) / 100.0;;
-   sum += (g[i - 1][j + 1][c] *   5.0) / 100.0;;
-   sum += (g[i + 1][j - 1][c] *   5.0) / 100.0;;
-   sum += (g[i + 1][j + 1][c] *   5.0) / 100.0;;
+   sum += (g[i - 1][j][c]     *   0.2);
+   sum += (g[i + 1][j][c]     *   0.2);
+   sum += (g[i][j - 1][c]     *   0.2);
+   sum += (g[i][j + 1][c]     *   0.2);
+   sum += (g[i - 1][j - 1][c] *   0.05);
+   sum += (g[i - 1][j + 1][c] *   0.05);
+   sum += (g[i + 1][j - 1][c] *   0.05);
+   sum += (g[i + 1][j + 1][c] *   0.05);
 
    return sum;
 }
@@ -125,18 +123,19 @@ void diffuse(
       }
 
    //
-   for (int i = 1; i < GRID_H - 1; i++)
-      for (int j = 1; j < GRID_W - 1; j++)
-         {
-            ta = G[i][j][0];
-            tb = G[i][j][1];
+   for (int i = 1; i < GRID_H - 1; i++) {
+     for (int j = 1; j < GRID_W - 1; j++)
+     {
+       ta = G[i][j][0];
+       tb = G[i][j][1];
 
-            //Chemical A
-            G1[i][j][0] = ta + (diff_rate_A * laplacian(G, i, j, 0) - (ta * tb * tb) + (f * (1 - ta))) * dt;
+       //Chemical A
+       G1[i][j][0] = ta + (diff_rate_A * laplacian(G, i, j, 0) - (ta * tb * tb) + (f * (1 - ta))) * dt;
 
-            //Chemical B
-            G1[i][j][1] = tb + (diff_rate_B * laplacian(G, i, j, 1) + (ta * tb * tb) - ((k + f) * tb)) * dt;
-         }
+       //Chemical B
+       G1[i][j][1] = tb + (diff_rate_B * laplacian(G, i, j, 1) + (ta * tb * tb) - ((k + f) * tb)) * dt;
+     }
+   }
 }
 
 //
