@@ -2,7 +2,7 @@ CC=gcc
 
 CFLAGS=-std=c99 -g3 -g
 
-OFLAGS=-O3 -march=skylake -funroll-loops
+OFLAGS=-Ofast -march=skylake -funroll-loops
 
 LFLAGS=-lm -pthread
 
