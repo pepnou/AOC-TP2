@@ -4,7 +4,7 @@ CFLAGS=-std=c99 -g3 -g
 
 OFLAGS=-O3 -march=skylake -funroll-loops
 
-LFLAGS=-lm
+LFLAGS=-lm -pthread
 
 all: diffusion_X11 diffusion
 
