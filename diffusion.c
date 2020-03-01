@@ -83,6 +83,46 @@ float laplacian(float * restrict g, int i, int j, int c)
   return sum;
 }
 
+void convol(float * G, float * G1, int iter) {
+  float ta, tb;
+  const float diff_rate_A = 1.0, diff_rate_B = 0.5;
+
+  //Coral Growth, f = 0.0545
+  //Mitosis, f = 0.0545
+  const float f = 0.0321, k = 0.062, dt = 1.1; //f: feed, k: kill, dt: delta time
+
+  int min_i = (GRID_H >> 1) - 10 - iter, max_i = min(GRID_H - 1, (GRID_H >> 1) + 10 + iter);
+   if(min_i < 1)
+    min_i = 1;
+
+   int min_j = (GRID_W >> 1) - 10 - iter, max_j = min(GRID_W - 1, (GRID_W >> 1) + 10 + iter);
+   if(min_j < 1)
+     min_j = 1;
+
+  for (int i = min_i; i < max_i; i++) {
+    for (int j = min_j; j < max_j; j++) {
+      ta = index(G,i,j,0);
+      tb = index(G,i,j,1);
+      
+      //Chemical A
+      index(G1,i,j,0) = ta + (diff_rate_A * laplacian(G, i, j, 0) - (ta * tb * tb) + (f * (1 - ta))) * dt;
+    }
+  }
+
+  for (int i = min_i; i < max_i; i++) {
+    for (int j = min_j; j < max_j; j++) {
+      ta = index(G,i,j,0);
+      tb = index(G,i,j,1);
+
+      //Chemical B
+      index(G1,i,j,1) = tb + (diff_rate_B * laplacian(G, i, j, 1) + (ta * tb * tb) - ((k + f) * tb)) * dt;
+    }
+  }
+}
+
+
+
+
 /*//
 void init(float G1[GRID_H][GRID_W][GRID_C])
 {
@@ -176,7 +216,7 @@ void diffuse(
             }
       }
 
-   int min_i = (GRID_H >> 1) - 10 - iter, max_i = min(GRID_H - 1, (GRID_H >> 1) + 10 + iter);
+   /*int min_i = (GRID_H >> 1) - 10 - iter, max_i = min(GRID_H - 1, (GRID_H >> 1) + 10 + iter);
    if(min_i < 1)
     min_i = 1;
 
@@ -203,7 +243,11 @@ void diffuse(
          index(G1,i,j+l,1) = tb + (diff_rate_B * laplacian(G_align, i, j+l, 1) + (ta * tb * tb) - ((k + f) * tb)) * dt;
        }
      }
-   }
+   }*/
+
+   convol(G, G1, iter);
+
+
 
    /*for (int i = min_i; i < max_i; i++) {
      for (int j = min_j; j < max_j; j++)
